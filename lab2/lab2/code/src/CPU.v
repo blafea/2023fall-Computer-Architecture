@@ -86,6 +86,12 @@ wire [31:0] dm_r_data_4;
 wire [4:0] rd_4;
 wire [31:0] wb_data;
 
+// forward
+wire [1:0] forward_A;
+wire [1:0] forward_B;
+wire [31:0] forward_A_data;
+wire [31:0] forward_B_data;
+
 
 Control Control(
     .op_i(opcode),
@@ -130,7 +136,7 @@ Registers Registers(
 
 MUX32 MUX_ALUSrc(
     .src_i(alusrc),
-    .data0_i(rs2data),
+    .data0_i(forward_B_data),
     .data1_i(ext_imm),
     .data_o(alu_sec)
 );
@@ -141,7 +147,7 @@ Sign_Extend Sign_Extend(
 );
   
 ALU ALU(
-    .data1_i(rs1data),
+    .data1_i(forward_A_data),
     .data2_i(alu_sec),
     .aluctr_i(aluctr),
     .data_o(alu_result),
@@ -249,10 +255,25 @@ Forwardingunit Forwardingunit(
     .MEM_rd_i(rd_3),
     .WB_rd_i(rd_4),
     .WB_regwrite_i(regwrite),
-    .forward_A_o,
-    .forward_B_o
+    .forward_A_o(forward_A),
+    .forward_B_o(forward_B)
 );
 
+MUX4 MUXA(
+    .src_i(forward_A),
+    .data0_i(rs1data),
+    .data1_i(wb_data),
+    .data2_i(dm_addr),
+    .data_o(forward_A_data)
+);
+
+MUX4 MUXB(
+    .src_i(forward_B),
+    .data0_i(rs2data),
+    .data1_i(wb_data),
+    .data2_i(dm_addr),
+    .data_o(forward_B_data)
+);
 
 endmodule
 
