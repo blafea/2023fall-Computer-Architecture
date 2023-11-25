@@ -1,0 +1,11 @@
+version: '3'
+services:
+  peco:
+    build:
+      context: .
+      dockerfile: dockerfile
+    container_name: peco
+    volumes:
+      - ./code:/root/project/code
+      - ./testcases:/root/project/testcases
+      - ./log:/root/project/log
