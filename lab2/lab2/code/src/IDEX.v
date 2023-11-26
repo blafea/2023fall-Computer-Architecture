@@ -29,7 +29,7 @@ module IDEX(
     rs1addr_o,
     rs2addr_o,
     rd_o
-)
+);
 
 input clk_i;
 input [1:0] aluop_i;
