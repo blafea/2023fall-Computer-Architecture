@@ -20,6 +20,9 @@ always @ (*) begin
         3'b101: tmp = 3'b111; //srai
         3'b010: tmp = 3'b011; //lw, sw
         endcase
+    else if (aluop_i == 2'b01) begin
+        tmp = 3'b100;
+    end
     else
         case (funct)
         10'b0000000111: tmp = 3'b000; //and

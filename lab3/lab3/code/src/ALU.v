@@ -2,15 +2,19 @@ module ALU(
     data1_i,
     data2_i,
     aluctr_i,
-    data_o
+    data_o,
+    zero_o
 );
 
 input signed [31:0] data1_i;
 input signed [31:0] data2_i;
 input [2:0] aluctr_i;
 output [31:0] data_o;
+output zero_o;
+
 reg signed [31:0] tmp;
 assign data_o = tmp;
+assign zero_o = (data1_i == data2_i);
 
 always @ (*) begin
     case (aluctr_i)

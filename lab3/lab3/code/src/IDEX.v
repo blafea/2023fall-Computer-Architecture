@@ -1,5 +1,6 @@
 module IDEX(
     clk_i,
+    rst_i,
     aluop_i,
     alusrc_i,
     regwrite_i,
@@ -14,6 +15,11 @@ module IDEX(
     rs1addr_i,
     rs2addr_i,
     rd_i,
+    flush_i,
+    branch_i,
+    pc_next_i,
+    beq_tar_i,
+    prev_pred_i,
 
     aluop_o,
     alusrc_o,
@@ -28,10 +34,15 @@ module IDEX(
     funct7_o,
     rs1addr_o,
     rs2addr_o,
-    rd_o
+    rd_o,
+    Branch_o,
+    pc_next_o,
+    beq_tar_o,
+    prev_pred_o
 );
 
 input clk_i;
+input rst_i;
 input [1:0] aluop_i;
 input alusrc_i;
 input regwrite_i;
@@ -48,6 +59,11 @@ input [4:0] rs1addr_i;
 input [4:0] rs2addr_i;
 input [4:0] rd_i;
 
+input flush_i;
+input branch_i;
+input [31:0] pc_next_i;
+input [31:0] beq_tar_i;
+input prev_pred_i;
 
 output [1:0] aluop_o;
 output alusrc_o;
@@ -65,6 +81,11 @@ output [4:0] rs1addr_o;
 output [4:0] rs2addr_o;
 output [4:0] rd_o;
 
+output Branch_o;
+output [31:0] pc_next_o;
+output [31:0] beq_tar_o;
+output prev_pred_o;
+
 reg [1:0] aluop_o;
 reg alusrc_o;
 reg regwrite_o;
@@ -81,7 +102,12 @@ reg [4:0] rs1addr_o;
 reg [4:0] rs2addr_o;
 reg [4:0] rd_o;
 
-always@(posedge clk_i) begin
+reg Branch_o;
+reg [31:0] pc_next_o;
+reg [31:0] beq_tar_o;
+reg prev_pred_o;
+
+always@(posedge clk_i or rst_i) begin
     aluop_o <= aluop_i;
     alusrc_o <= alusrc_i;
     regwrite_o <= regwrite_i;
@@ -97,6 +123,33 @@ always@(posedge clk_i) begin
     rs1addr_o <= rs1addr_i;
     rs2addr_o <= rs2addr_i;
     rd_o <= rd_i;
+
+    Branch_o <= branch_i;
+    pc_next_o <= pc_next_i;
+    beq_tar_o <= beq_tar_i;
+    prev_pred_o <= prev_pred_i;
+    if (flush_i) begin
+        aluop_o <= 0;
+        alusrc_o <= 0;
+        regwrite_o <= 0;
+        memtoreg_o <= 0;
+        memread_o <= 0;
+        memwrite_o <= 0;
+
+        rs1data_o <= 0;
+        rs2data_o <= 0;
+        ext_imm_o <= 0;
+        funct3_o <= 0;
+        funct7_o <= 0;
+        rs1addr_o <= 0;
+        rs2addr_o <= 0;
+        rd_o <= 0;
+
+        Branch_o <= 0;
+        pc_next_o <= 0;
+        beq_tar_o <= 0;
+        prev_pred_o <= 0;
+    end
 end
 
 

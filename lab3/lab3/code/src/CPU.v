@@ -5,23 +5,27 @@ module CPU
 );
 
 initial begin
-    IFID.instr_o = 0;
-    IFID.pc_o = 0;
+    IF_ID.instr_o = 0;
+    IF_ID.pc_o = 0;
 
-    IDEX.aluop_o = 0;
-    IDEX.alusrc_o = 0;
-    IDEX.regwrite_o = 0;
-    IDEX.memtoreg_o = 0;
-    IDEX.memread_o = 0;
-    IDEX.memwrite_o = 0;
-    IDEX.rs1data_o = 0;
-    IDEX.rs2data_o = 0;
-    IDEX.ext_imm_o = 0;
-    IDEX.funct3_o = 0;
-    IDEX.funct7_o = 0;
-    IDEX.rs1addr_o = 0;
-    IDEX.rs2addr_o = 0;
-    IDEX.rd_o = 0;
+    ID_EX.aluop_o = 0;
+    ID_EX.alusrc_o = 0;
+    ID_EX.regwrite_o = 0;
+    ID_EX.memtoreg_o = 0;
+    ID_EX.memread_o = 0;
+    ID_EX.memwrite_o = 0;
+    ID_EX.rs1data_o = 0;
+    ID_EX.rs2data_o = 0;
+    ID_EX.ext_imm_o = 0;
+    ID_EX.funct3_o = 0;
+    ID_EX.funct7_o = 0;
+    ID_EX.rs1addr_o = 0;
+    ID_EX.rs2addr_o = 0;
+    ID_EX.rd_o = 0;
+    ID_EX.Branch_o = 0;
+    ID_EX.pc_next_o = 0;
+    ID_EX.beq_tar_o = 0;
+    ID_EX.prev_pred_o = 0;
 
     EXMEM.regwrite_o = 0;
     EXMEM.memtoreg_o = 0;
@@ -36,6 +40,8 @@ initial begin
     MEMWB.alu_result_o = 0;
     MEMWB.dm_r_data_o = 0;
     MEMWB.rd_o = 0;
+
+    branch_predictor.state = 0;
 
     // Hazard_Detection.pcwrite_o = 1;
 end
@@ -82,6 +88,7 @@ wire regwrite_1;
 wire memtoreg_1;
 wire memread_1;
 wire memwrite_1;
+wire branch_1;
 wire [31:0] rs1data_1, rs2data_1;
 wire [31:0] ext_imm_1;
 wire [6:0] funct7_1;
@@ -138,6 +145,23 @@ wire [31:0] pc_1;
 wire [31:0] beq_tar;
 wire [31:0] pc_mux;
 
+// branch predictor
+wire flush_1;
+wire flush_2;
+wire predict;
+wire prev_pred_2;
+wire [31:0] pc_next_2;
+wire [31:0] beq_tar_2;
+wire [31:0] pc_mux_1;
+wire [31:0] pc_restore;
+wire pc_select;
+wire [31:0] pc_next_1;
+
+assign flush_2 = branch && (prev_pred_2 != zero);
+assign flush_1 = flush_2 || (branch_1 && predict);
+assign pc_select = branch_1 && predict;
+assign pc_restore = (prev_pred_2 && !zero) ? pc_next_2 : beq_tar_2;
+
 Control Control(
     .op_i(opcode),
     .no_op_i(no_op),
@@ -147,7 +171,7 @@ Control Control(
     .memtoreg_o(memtoreg_1),
     .memread_o(memread_1),
     .memwrite_o(memwrite_1),
-    .Branch_o(branch)
+    .Branch_o(branch_1)
 );
 
 Adder Add_PC(
@@ -197,7 +221,8 @@ ALU ALU(
     .data1_i(forward_A_data),
     .data2_i(alu_sec),
     .aluctr_i(aluctr),
-    .data_o(alu_result_2)
+    .data_o(alu_result_2),
+    .zero_o(zero)
 );
 
 ALU_Control ALU_Control(
@@ -216,18 +241,19 @@ Data_Memory Data_Memory(
     .data_o(dm_r_data)
 );
 
-IFID IFID(
+IFID IF_ID(
     .clk_i(clk_i),
     .stall_i(stall),
-    .flush_i(ID_FlushIF),
+    .flush_i(flush_1),
     .pc_i(instr_add),
     .instr_i(instr_0),
     .pc_o(pc_1),
     .instr_o(instr)
 );
 
-IDEX IDEX(
+IDEX ID_EX(
     .clk_i(clk_i),
+    .rst_i(rst_i),
     .aluop_i(aluop_1),
     .alusrc_i(alusrc_1),
     .regwrite_i(regwrite_1),
@@ -242,6 +268,11 @@ IDEX IDEX(
     .rs1addr_i(rs1),
     .rs2addr_i(rs2),
     .rd_i(rd_1),
+    .flush_i(flush_2),
+    .branch_i(branch_1),
+    .pc_next_i(pc_next_1),
+    .beq_tar_i(beq_tar),
+    .prev_pred_i(predict),
 
     .aluop_o(aluop),
     .alusrc_o(alusrc),
@@ -256,7 +287,11 @@ IDEX IDEX(
     .funct7_o(funct7),
     .rs1addr_o(rs1addr_2),
     .rs2addr_o(rs2addr_2),
-    .rd_o(rd_2)
+    .rd_o(rd_2),
+    .Branch_o(branch),
+    .pc_next_o(pc_next_2),
+    .beq_tar_o(beq_tar_2),
+    .prev_pred_o(prev_pred_2)
 );
 
 EXMEM EXMEM(
@@ -335,20 +370,37 @@ Hazard_Detection Hazard_Detection(
     .pcwrite_o(pcwrite)
 );
 
-Branchunit Branchunit(
-    .rs1data_i(rs1data_1),
-    .rs2data_i(rs2data_1),
-    .branch_i(branch),
-    .pc_i(pc_1),
-    .ext_imm_i(ext_imm_1),
-    .flush_o(ID_FlushIF),
-    .beq_tar_o(beq_tar)
+branch_predictor branch_predictor (
+    .clk_i(clk_i),
+    .rst_i(rst_i),
+    .update_i(branch),
+    .result_i(zero),
+    .predict_o(predict)
 );
 
-MUX32 pc_beq(
-    .src_i(ID_FlushIF),
+Adder Add_Beq(
+    .data1_i(pc_1),
+    .data2_i(ext_imm_1 << 1),
+    .data_o(beq_tar)
+);
+
+Adder Add_pc_next(
+    .data1_i(pc_1),
+    .data2_i(32'd4),
+    .data_o(pc_next_1)
+);
+
+MUX32 pc_beq1(
+    .src_i(pc_select),
     .data0_i(pc),
     .data1_i(beq_tar),
+    .data_o(pc_mux_1)
+);
+
+MUX32 pc_beq2(
+    .src_i(flush_2),
+    .data0_i(pc_mux_1),
+    .data1_i(pc_restore),
     .data_o(pc_mux)
 );
 
